@@ -1,0 +1,9 @@
+
+.gradle/
+.idea/
+build/
+demo2.iml
+input/
+out/
+output/
+target/
