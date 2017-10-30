@@ -1,0 +1,56 @@
+package com.cleitech.receipt
+
+import com.google.api.client.auth.oauth2.Credential
+import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.http.HttpTransport
+import com.google.api.client.json.JsonFactory
+import com.google.api.client.util.store.DataStoreFactory
+import com.google.api.services.drive.Drive
+import com.google.api.services.drive.DriveScopes
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
+import java.io.FileReader
+import java.io.IOException
+import java.security.GeneralSecurityException
+
+@Component
+class DriveInitService(val jsonFactory: JsonFactory,
+                       val dataStoreFactory: DataStoreFactory,
+                       @Value("\${spring.application.name") val applicationName: String) {
+
+    @Throws(IOException::class, GeneralSecurityException::class)
+    fun drive(): Drive = Drive.Builder(
+            httpTransport(), jsonFactory, googleCredentials())
+            .setApplicationName(applicationName)
+            .build()
+
+    @Throws(GeneralSecurityException::class, IOException::class)
+    private fun httpTransport(): HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
+
+    fun googleCredentials(): Credential {
+        val clientSecrets = GoogleClientSecrets.load(jsonFactory, FileReader("./client_secret_receipt.json"))
+
+
+        // Build flow and trigger user authorization request.
+        val flow = GoogleAuthorizationCodeFlow.Builder(
+                httpTransport(), jsonFactory, clientSecrets, googleAuthorizeScopes())
+                .setDataStoreFactory(dataStoreFactory)
+                .setAccessType("offline")
+                .build()
+        var authorizationCodeInstalledApp = AuthorizationCodeInstalledApp(
+                flow, LocalServerReceiver())
+        var authorize = authorizationCodeInstalledApp.authorize("user")
+        return authorize
+    }
+
+    fun googleAuthorizeScopes(): List<String>
+            = listOf(
+//            GmailScopes.GMAIL_SEND,
+            DriveScopes.DRIVE_METADATA_READONLY,
+            DriveScopes.DRIVE
+    )
+}

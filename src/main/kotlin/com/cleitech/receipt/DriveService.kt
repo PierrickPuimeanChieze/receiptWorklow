@@ -4,20 +4,28 @@ package com.cleitech.receipt
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
 import org.apache.commons.logging.LogFactory
+import org.springframework.stereotype.Component
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
+import javax.annotation.PostConstruct
 
 
 /**
  * Created by ppc on 1/26/2017.
  */
+@Component
+class DriveService(val driveInitService: DriveInitService)  {
 
-class DriveService  (val drive:Drive) {
+    lateinit var drive : Drive;
 
+    @PostConstruct
+    fun initDrive() {
+        drive = driveInitService.drive()
+    }
     @Throws(IOException::class)
     fun retrieveFileId(dirName: String): String {
         LOG.debug("Retrieving drive id for dir " + dirName)

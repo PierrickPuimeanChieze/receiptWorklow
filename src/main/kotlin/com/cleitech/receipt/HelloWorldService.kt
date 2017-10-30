@@ -1,8 +1,8 @@
 package com.cleitech.receipt
 
-import org.springframework.stereotype.Service
+import org.springframework.stereotype.Component
 
-@Service
+@Component
 class HelloWorldService(private val configuration: ServiceProperties) {
 
     fun getHelloMessage(name: String): String {

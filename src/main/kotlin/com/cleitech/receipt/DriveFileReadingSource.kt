@@ -3,13 +3,14 @@ package com.cleitech.receipt
 import com.google.api.services.drive.model.File
 import org.springframework.integration.context.IntegrationObjectSupport
 import org.springframework.integration.core.MessageSource
+import org.springframework.integration.file.FileHeaders
 import org.springframework.messaging.Message
 import java.io.InputStream
 import java.util.*
 import java.util.concurrent.PriorityBlockingQueue
 
 
-class DriveFileReadingSource(val drive: DriveService, val configurationService: ConfigurationService) : IntegrationObjectSupport(), MessageSource<InputStream> {
+class DriveFileReadingSource(val driveService: DriveService, val configurationService: ConfigurationService) : IntegrationObjectSupport(), MessageSource<InputStream> {
     private val toBeReceived: Queue<File> = PriorityBlockingQueue<File>(
             5)
 
@@ -28,11 +29,11 @@ class DriveFileReadingSource(val drive: DriveService, val configurationService: 
 
 
         if (file != null) {
-            var withPayload = messageBuilderFactory.withPayload(drive.getInputStreamForFile(file))
+            var withPayload = messageBuilderFactory.withPayload(driveService.getInputStreamForFile(file))
             file.appProperties.forEach { key, value ->
                 withPayload.setHeader(key, value)
             }
-
+            withPayload.setHeader(FileHeaders.FILENAME, file.originalFilename)
             withPayload.build()
             if (logger.isInfoEnabled()) {
                 logger.info("Created message: [$message]")
@@ -44,13 +45,13 @@ class DriveFileReadingSource(val drive: DriveService, val configurationService: 
     fun scanInputDirectory() {
         val driveToOcrEntries = this.configurationService.driveToOcrEntries()
         driveToOcrEntries.forEach { entry ->
-            val files = drive.retrieveFileToUpload(entry.toScanDirId).filter { accept(it) }
+            val files = driveService.retrieveFileToUpload(entry.toScanDirId).filter { accept(it) }
             files.forEach { file ->
                 file.appProperties.putAll(
                         mapOf(
                                 DriveFileHeaders.DEST_DIR to entry.uploadedDirId,
                                 DriveFileHeaders.OCR_CAT to entry.ocrCategory,
-                                DriveFileHeaders.DEST_DIR to entry.uploadedDirId
+                                FileHeaders.REMOTE_DIRECTORY to entry.toScanDirId
                         )
                 )
             }
