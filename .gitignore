@@ -7,3 +7,5 @@ input/
 out/
 output/
 target/
+/*.json
+/*.properties

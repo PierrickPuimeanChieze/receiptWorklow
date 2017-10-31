@@ -51,5 +51,6 @@ dependencies {
 	compile 'com.google.apis:google-api-services-gmail:v1-rev56-1.22.0'
 	compile 'com.google.code.gson:gson:2.6.2'
 	compile 'com.google.apis:google-api-services-drive:v3-rev52-1.22.0'
+	compile 'io.github.microutils:kotlin-logging:1.4.6'
 //    compile 'org.springframework.boot:spring-boot-starter-thymeleaf'
 }

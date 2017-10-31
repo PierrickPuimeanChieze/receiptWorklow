@@ -3,13 +3,10 @@ package com.cleitech.receipt
 
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
-import org.apache.commons.logging.LogFactory
+import mu.KotlinLogging
 import org.springframework.stereotype.Component
-import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
-import java.nio.file.Files
-import java.nio.file.Path
 import java.util.*
 import javax.annotation.PostConstruct
 
@@ -17,15 +14,20 @@ import javax.annotation.PostConstruct
 /**
  * Created by ppc on 1/26/2017.
  */
-@Component
-class DriveService(val driveInitService: DriveInitService)  {
 
-    lateinit var drive : Drive;
+private val LOG = KotlinLogging.logger {}
+
+@Component
+class DriveService(val driveInitService: DriveInitService) {
+
+
+    lateinit var drive: Drive;
 
     @PostConstruct
     fun initDrive() {
         drive = driveInitService.drive()
     }
+
     @Throws(IOException::class)
     fun retrieveFileId(dirName: String): String {
         LOG.debug("Retrieving drive id for dir " + dirName)
@@ -51,19 +53,13 @@ class DriveService(val driveInitService: DriveInitService)  {
     }
 
 
+    /**
+     * Copy a drive file to a new Directory.<br/>
+     * Additionnaly, if the sourceDir is provided, will remove the file from this source Dir,
+     * making the operation a move
+     */
     @Throws(IOException::class)
-    fun downloadTempFile(fileId: String, fileName: String): Path {
-        val tempFileName = Files.createTempFile("shoeb_", fileName)
-        val outputStream = FileOutputStream(tempFileName.toFile())
-        drive.files().get(fileId)
-                .executeMediaAndDownloadTo(outputStream)
-        outputStream.close()
-        return tempFileName
-    }
-
-    @Throws(IOException::class)
-    fun moveFileToUploadedDir(id: String, sourceDir: String, destDir: String) {
-
+    fun copyFileToUploadedDir(id: String, sourceDir: String?, destDir: String) {
         val update = drive.files().update(id, null)
         update.removeParents = sourceDir
         update.addParents = destDir
@@ -84,7 +80,7 @@ class DriveService(val driveInitService: DriveInitService)  {
         var fileToUpload = fileResult.files
         wholeSet.addAll(fileToUpload)
         var nextPageToken: String? = fileResult.nextPageToken
-        LOG.debug("next Page Token : " + nextPageToken!!)
+        LOG.debug("next Page Token : " + if (nextPageToken != null) nextPageToken.length else "None")
         while (nextPageToken != null) {
             LOG.debug("retrieve new result")
             fileResult = drive.files().list()
@@ -101,11 +97,8 @@ class DriveService(val driveInitService: DriveInitService)  {
         return wholeSet
     }
 
-    companion object {
-        private val LOG = LogFactory.getLog(DriveService::class.java)
-    }
 
     fun getInputStreamForFile(file: File): InputStream =
-        drive.files().get(file.id).executeMediaAsInputStream()
+            drive.files().get(file.id).executeMediaAsInputStream()
 
 }

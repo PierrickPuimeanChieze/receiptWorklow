@@ -3,10 +3,11 @@ package com.cleitech.receipt
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
+import com.google.api.client.googleapis.GoogleUtils
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.http.HttpTransport
+import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.JsonFactory
 import com.google.api.client.util.store.DataStoreFactory
 import com.google.api.services.drive.Drive
@@ -15,12 +16,18 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.io.FileReader
 import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.security.GeneralSecurityException
+
 
 @Component
 class DriveInitService(val jsonFactory: JsonFactory,
                        val dataStoreFactory: DataStoreFactory,
-                       @Value("\${spring.application.name") val applicationName: String) {
+                       @Value("\${spring.application.name") val applicationName: String,
+                       @Value("\${proxy.host}") val proxyHost : String?,
+                       @Value("\${proxy.port}") val proxyport  : Int = 80
+) {
 
     @Throws(IOException::class, GeneralSecurityException::class)
     fun drive(): Drive = Drive.Builder(
@@ -29,7 +36,15 @@ class DriveInitService(val jsonFactory: JsonFactory,
             .build()
 
     @Throws(GeneralSecurityException::class, IOException::class)
-    private fun httpTransport(): HttpTransport = GoogleNetHttpTransport.newTrustedTransport()
+    private fun httpTransport(): HttpTransport //= GoogleNetHttpTransport.newTrustedTransport()
+    {
+        val httpBuilder = NetHttpTransport.Builder().
+                trustCertificates(GoogleUtils.getCertificateTrustStore())
+        if (proxyHost != null) {
+            httpBuilder.setProxy(Proxy( Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyport)))
+        }
+        return httpBuilder.build()
+    }
 
     fun googleCredentials(): Credential {
         val clientSecrets = GoogleClientSecrets.load(jsonFactory, FileReader("./client_secret_receipt.json"))

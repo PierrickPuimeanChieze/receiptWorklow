@@ -5,17 +5,15 @@ import org.springframework.integration.context.IntegrationObjectSupport
 import org.springframework.integration.core.MessageSource
 import org.springframework.integration.file.FileHeaders
 import org.springframework.messaging.Message
-import java.io.InputStream
 import java.util.*
-import java.util.concurrent.PriorityBlockingQueue
+import java.util.concurrent.LinkedTransferQueue
 
 
-class DriveFileReadingSource(val driveService: DriveService, val configurationService: ConfigurationService) : IntegrationObjectSupport(), MessageSource<InputStream> {
-    private val toBeReceived: Queue<File> = PriorityBlockingQueue<File>(
-            5)
+class DriveFileReadingSource(val driveService: DriveService, val configurationService: ConfigurationService) : IntegrationObjectSupport(), MessageSource<File> {
+    private val toBeReceived: Queue<File> = LinkedTransferQueue<File>()
 
-    override fun receive(): Message<InputStream>? {
-        var message: Message<InputStream>? = null
+    override fun receive(): Message<File>? {
+        var message: Message<File>? = null
 
         // rescan only if needed or explicitly configured
         if (this.toBeReceived.isEmpty()) {
@@ -28,13 +26,13 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
         // we can't rely on isEmpty for concurrency reasons
 
 
-        if (file != null) {
-            var withPayload = messageBuilderFactory.withPayload(driveService.getInputStreamForFile(file))
+        if (file != null && accept(file)) {
+            var withPayload = messageBuilderFactory.withPayload(file)
             file.appProperties.forEach { key, value ->
                 withPayload.setHeader(key, value)
             }
             withPayload.setHeader(FileHeaders.FILENAME, file.originalFilename)
-            withPayload.build()
+            message = withPayload.build()
             if (logger.isInfoEnabled()) {
                 logger.info("Created message: [$message]")
             }
@@ -47,13 +45,13 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
         driveToOcrEntries.forEach { entry ->
             val files = driveService.retrieveFileToUpload(entry.toScanDirId).filter { accept(it) }
             files.forEach { file ->
-                file.appProperties.putAll(
+                file.appProperties =
                         mapOf(
                                 DriveFileHeaders.DEST_DIR to entry.uploadedDirId,
                                 DriveFileHeaders.OCR_CAT to entry.ocrCategory,
                                 FileHeaders.REMOTE_DIRECTORY to entry.toScanDirId
                         )
-                )
+
             }
             toBeReceived.addAll(files)
         }
@@ -64,7 +62,7 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
     //private val seen: Queue<File>?
 
     private val seenSet = HashSet<File>()
-    fun accept(file: File): Boolean {
+    private fun accept(file: File): Boolean {
         synchronized(this.monitor) {
             if (this.seenSet.contains(file)) {
                 return false
