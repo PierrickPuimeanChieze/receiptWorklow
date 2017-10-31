@@ -9,3 +9,4 @@ output/
 target/
 /*.json
 /*.properties
+!/driveToOcr.json
