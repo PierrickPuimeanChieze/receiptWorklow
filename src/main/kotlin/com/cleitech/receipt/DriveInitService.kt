@@ -25,8 +25,8 @@ import java.security.GeneralSecurityException
 class DriveInitService(val jsonFactory: JsonFactory,
                        val dataStoreFactory: DataStoreFactory,
                        @Value("\${spring.application.name") val applicationName: String,
-                       @Value("\${proxy.host}") val proxyHost : String?,
-                       @Value("\${proxy.port}") val proxyport  : Int = 80
+                       @Value("\${proxy.host:#{null}}") val proxyHost : String? ,
+                       @Value("\${proxy.port:#{80}}") val proxyport  : Int
 ) {
 
     @Throws(IOException::class, GeneralSecurityException::class)

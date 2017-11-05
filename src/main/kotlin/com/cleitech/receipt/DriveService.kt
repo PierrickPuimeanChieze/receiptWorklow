@@ -80,7 +80,7 @@ class DriveService(val driveInitService: DriveInitService) {
         var fileToUpload = fileResult.files
         wholeSet.addAll(fileToUpload)
         var nextPageToken: String? = fileResult.nextPageToken
-        LOG.debug("next Page Token : " + if (nextPageToken != null) nextPageToken.length else "None")
+        LOG.debug("next Page Token : " + (nextPageToken ?: "None"))
         while (nextPageToken != null) {
             LOG.debug("retrieve new result")
             fileResult = drive.files().list()

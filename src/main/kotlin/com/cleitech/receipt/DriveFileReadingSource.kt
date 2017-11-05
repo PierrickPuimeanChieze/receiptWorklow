@@ -40,7 +40,7 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
         return message
     }
 
-    fun scanInputDirectory() {
+    private fun scanInputDirectory() {
         val driveToOcrEntries = this.configurationService.driveToOcrEntries()
         driveToOcrEntries.forEach { entry ->
             val files = driveService.retrieveFileToUpload(entry.toScanDirId).filter { accept(it) }

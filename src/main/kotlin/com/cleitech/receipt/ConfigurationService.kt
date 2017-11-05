@@ -16,12 +16,7 @@ data class DriveToOCREntry(
 @Component
 class ConfigurationService {
 
-    private fun parse(name: String): Any? {
-        val cls = Parser::class.java
-        return cls.getResourceAsStream(name)?.let { inputStream ->
-            return Parser().parse(inputStream)
-        }
-    }
+    private fun parse(name: String): Any? = Parser().parse(name)
 
     fun driveToOcrEntries(): List<DriveToOCREntry> {
         val obj = parse("driveToOcr.json") as JsonArray<JsonObject>
