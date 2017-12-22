@@ -15,7 +15,7 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
     override fun receive(): Message<File>? {
         var message: Message<File>? = null
 
-        // rescan only if needed or explicitly configured
+        // rescan only if needed
         if (this.toBeReceived.isEmpty()) {
             scanInputDirectory()
         }

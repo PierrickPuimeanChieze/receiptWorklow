@@ -2,7 +2,7 @@
 .gradle/
 .idea/
 build/
-demo2.iml
+*.iml
 input/
 out/
 output/

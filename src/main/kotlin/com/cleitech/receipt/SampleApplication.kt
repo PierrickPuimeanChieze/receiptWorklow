@@ -72,6 +72,15 @@ class SampleIntegrationApplication() {
     }
 
 
+    /**
+     * Describe a flow moving file from a directories to another in google drive.
+     * The target directory is determined by the payload header DriveFileHeaders.DEST_DIR
+     * If an ocr category is associated to the payload (payload header DriveFileHeaders.OCR_CAT), the file will be sent
+     * to the OCR service before being moved
+     * If a Dropbox directory is associated to the payload (TODO payload header), the file will be sent to dropbox
+     * before being moved
+     * OCR and dropbox are currently mutually exclusive
+     */
     @Bean
     fun fromDriveFlow(driveFileReadingSource: DriveFileReadingSource,
                       toOcr: IntegrationFlow,
@@ -82,6 +91,8 @@ class SampleIntegrationApplication() {
 
 
 
+        //This consumer will determined the subflow destination : either ocr or dropbox
+        //TODO replace the writeToDriveFlow by a writeToDropboxFlow
         var consumer = Consumer<RouterSpec<Boolean, ExpressionEvaluatingRouter>>{ spec: RouterSpec<Boolean, ExpressionEvaluatingRouter> ->
             run {
                 spec
@@ -109,6 +120,9 @@ class SampleIntegrationApplication() {
 
     }
 
+    /**
+     * This flow read payload sent to writeToDrive channel and write them to Google Drive directory
+     */
     @Bean
     fun writeToDriveFlow(driveFileWritingHandler: DriveFileWritingHandler) = IntegrationFlow { sf ->
         sf.channel(writeToDrive())
