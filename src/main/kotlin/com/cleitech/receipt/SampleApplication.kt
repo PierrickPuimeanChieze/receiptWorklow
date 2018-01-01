@@ -10,15 +10,15 @@ import org.springframework.integration.file.FileReadingMessageSource
 import org.springframework.integration.file.FileWritingMessageHandler
 import org.springframework.integration.handler.LoggingHandler
 import org.springframework.integration.router.AbstractMessageRouter
-import org.springframework.integration.router.ExpressionEvaluatingRouter
-import org.springframework.integration.router.MethodInvokingRouter
 import org.springframework.messaging.Message
 import org.springframework.messaging.MessageChannel
 import java.io.File
 import java.util.function.Consumer
-import java.util.function.Function
+import com.cleitech.receipt.handlers.DatamolinoHandler
+import com.cleitech.receipt.handlers.DriveFileWritingHandler
+import com.cleitech.receipt.handlers.DropboxHandler
 
-
+typealias MessageHandler = (Message<File>) -> Unit
 @SpringBootApplication
 @EnableConfigurationProperties(ServiceProperties::class)
 //@Import(GoogleConfiguration::class)
@@ -41,11 +41,22 @@ class SampleIntegrationApplication() {
     fun driveFileWritingHandler(driveService: DriveService): DriveFileWritingHandler
             = DriveFileWritingHandler(driveService)
 
+    /**
+     * Route a payload, either to Dropbox  OCR channel, depending of the presence of payload header OCR_CAT or DROPBOX_DIR.
+     * Absence of both will write to Drive
+     * Presence of both will throw an IllegalStateException
+     */
     @Bean
     fun driveRouter() = object : AbstractMessageRouter() {
         override fun determineTargetChannels(message: Message<*>): MutableCollection<MessageChannel> {
-            if (message.headers.containsKey(DriveFileHeaders.OCR_CAT))
+            val toOcr = message.headers.containsKey(DriveFileHeaders.OCR_CAT)
+            val toDropbox = message.headers.containsKey(DriveFileHeaders.DROPBOX_DIR)
+            if (toOcr && toDropbox)
+                throw IllegalStateException(message.toString() + " need to be sent to OCR OR Dropbox. Not box")
+            else if (toOcr)
                 return mutableListOf(sendToOcr())
+            else if (toDropbox)
+                return mutableListOf(sendToDropbox())
             else
                 return mutableListOf(writeToDrive())
         }
@@ -58,7 +69,7 @@ class SampleIntegrationApplication() {
     fun writeToDrive(): DirectChannel = DirectChannel()
 
     @Bean
-    fun writeToOcr(): DirectChannel = DirectChannel()
+    fun sendToDropbox(): DirectChannel = DirectChannel()
 
     @Bean
     fun sendToOcr(): DirectChannel = DirectChannel()
@@ -70,6 +81,8 @@ class SampleIntegrationApplication() {
         writer.setExpectReply(false)
         return writer
     }
+
+
 
 
     /**
@@ -89,37 +102,27 @@ class SampleIntegrationApplication() {
             spec.poller(Pollers.fixedRate(500))
         }
 
-
-
-        //This consumer will determined the subflow destination : either ocr or dropbox
-        //TODO replace the writeToDriveFlow by a writeToDropboxFlow
-        var consumer = Consumer<RouterSpec<Boolean, ExpressionEvaluatingRouter>>{ spec: RouterSpec<Boolean, ExpressionEvaluatingRouter> ->
-            run {
-                spec
-                        .subFlowMapping(true, toOcr)
-                        .subFlowMapping(false, writeToDriveFlow)
-            }
-
-        }
         return IntegrationFlows.from(driveFileReadingSource, fixedRatePoller)
                 .route(
-                        //??? Expression router
-                        "headers.containsKey('${DriveFileHeaders.OCR_CAT}')"
-
-                        ,
-                        consumer)
+                        driveRouter())
                 .get()
     }
 
     @Bean
-    fun toOcr(): IntegrationFlow = IntegrationFlow { sf ->
-        sf.channel(writeToOcr())
-                .log(LoggingHandler.Level.INFO, "ocr.test.originalFileName", {m:Message<com.google.api.services.drive.model.File>-> m.payload.originalFilename})
-                .log(LoggingHandler.Level.INFO, "ocr.test.category", {m:Message<com.google.api.services.drive.model.File>-> m.headers[DriveFileHeaders.OCR_CAT]})
-                .wireTap(writeToDrive())
+    fun toOcr(datamolinoHandler: DatamolinoHandler): IntegrationFlow = IntegrationFlow { sf ->
+        sf.channel(sendToOcr())
+                .handle(datamolinoHandler)
+                .channel(writeToDrive())
 
     }
 
+    @Bean
+    fun toDropBoxFlow(dropboxHandler: DropboxHandler): IntegrationFlow = IntegrationFlow { sf ->
+        sf.channel(sendToDropbox())
+                .handle(dropboxHandler)
+                .channel(writeToDrive())
+
+    }
     /**
      * This flow read payload sent to writeToDrive channel and write them to Google Drive directory
      */
@@ -129,6 +132,7 @@ class SampleIntegrationApplication() {
                 .handle(driveFileWritingHandler)
     }
 }
+
 
 fun main(args: Array<String>) {
     SpringApplication.run(SampleIntegrationApplication::class.java, *args)

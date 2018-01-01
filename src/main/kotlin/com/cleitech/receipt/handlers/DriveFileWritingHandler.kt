@@ -1,5 +1,7 @@
-package com.cleitech.receipt
+package com.cleitech.receipt.handlers
 
+import com.cleitech.receipt.DriveFileHeaders
+import com.cleitech.receipt.DriveService
 import com.google.api.services.drive.model.File
 import org.springframework.integration.file.FileHeaders
 import org.springframework.messaging.Message
@@ -8,7 +10,7 @@ import org.springframework.messaging.Message
 class DriveFileWritingHandler(private val driveService: DriveService) {
 
     fun handleMessage(requestMessage: Message<File>) {
-        val file = requestMessage.payload;
+        val file = requestMessage.payload
         val sourceDir: String? = requestMessage.headers[FileHeaders.REMOTE_DIRECTORY] as String
         val destDir: String = requestMessage.headers[DriveFileHeaders.DEST_DIR] as String
 

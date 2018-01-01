@@ -20,14 +20,14 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
             scanInputDirectory()
         }
 
-        var file: File? = this.toBeReceived.poll()
+        val file: File? = this.toBeReceived.poll()
 
         // file == null means the queue was empty
         // we can't rely on isEmpty for concurrency reasons
 
 
         if (file != null && accept(file)) {
-            var withPayload = messageBuilderFactory.withPayload(file)
+            val withPayload = messageBuilderFactory.withPayload(file)
             file.appProperties.forEach { key, value ->
                 withPayload.setHeader(key, value)
             }
@@ -48,6 +48,7 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
                 file.appProperties =
                         mapOf(
                                 DriveFileHeaders.DEST_DIR to entry.uploadedDirId,
+                                DriveFileHeaders.DROPBOX_DIR to entry.dropboxDir,
                                 DriveFileHeaders.OCR_CAT to entry.ocrCategory,
                                 FileHeaders.REMOTE_DIRECTORY to entry.toScanDirId
                         )

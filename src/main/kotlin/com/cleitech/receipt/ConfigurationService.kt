@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component
 data class DriveToOCREntry(
         val toScanDirId: String,
         val uploadedDirId: String,
-        val ocrCategory: String
+        val ocrCategory: String?,
+        val dropboxDir:String?
 )
 
 @Component
@@ -24,7 +25,9 @@ class ConfigurationService {
             DriveToOCREntry(
                     it.string("toScanDirId")!!,
                     it.string("uploadedDirId")!!,
-                    it.string("ocrCategory")!!
+                    it.string("ocrCategory"),
+                    it.string("dropboxDir")
+
             )
         }
 
