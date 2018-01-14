@@ -32,6 +32,7 @@ compileTestKotlin {
 }
 
 repositories {
+    maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
     mavenCentral()
     jcenter()
 //	maven {url "http://famifed-nexus.rkw-onafts.be:8081/nexus/content/groups/public"}

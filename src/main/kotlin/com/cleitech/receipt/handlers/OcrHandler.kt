@@ -14,9 +14,9 @@ class OcrHandler(val ocrService: OcrService,
 
 
     fun uploadMessageToDatamolino(requestMessage: Message<File>): Message<File> {
-        var inputStreamForFile = driveService.getInputStreamForFile(requestMessage.payload)
+        val inputStreamForFile = driveService.getInputStreamForFile(requestMessage.payload)
         ocrService.uploadFile(inputStreamForFile)
-        inputStreamForFile.close();
+        inputStreamForFile.close()
         return requestMessage
     }
 

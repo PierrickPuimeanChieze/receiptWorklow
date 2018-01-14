@@ -56,9 +56,9 @@ class DriveInitService(val jsonFactory: JsonFactory,
                 .setDataStoreFactory(dataStoreFactory)
                 .setAccessType("offline")
                 .build()
-        var authorizationCodeInstalledApp = AuthorizationCodeInstalledApp(
+        val authorizationCodeInstalledApp = AuthorizationCodeInstalledApp(
                 flow, LocalServerReceiver())
-        var authorize = authorizationCodeInstalledApp.authorize("user")
+        val authorize = authorizationCodeInstalledApp.authorize("user")
         return authorize
     }
 

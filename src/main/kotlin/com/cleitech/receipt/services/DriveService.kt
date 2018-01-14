@@ -21,7 +21,7 @@ private val LOG = KotlinLogging.logger {}
 class DriveService(val driveInitService: DriveInitService) {
 
 
-    lateinit var drive: Drive;
+    lateinit var drive: Drive
 
     @PostConstruct
     fun initDrive() {
@@ -64,7 +64,7 @@ class DriveService(val driveInitService: DriveInitService) {
         update.removeParents = sourceDir
         update.addParents = destDir
         update.fields = "id, parents"
-        val execute = update.execute()
+        update.execute()
     }
 
     @Throws(IOException::class)
