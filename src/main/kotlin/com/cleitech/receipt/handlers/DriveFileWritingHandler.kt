@@ -1,7 +1,7 @@
 package com.cleitech.receipt.handlers
 
 import com.cleitech.receipt.DriveFileHeaders
-import com.cleitech.receipt.DriveService
+import com.cleitech.receipt.services.DriveService
 import com.google.api.services.drive.model.File
 import org.springframework.integration.file.FileHeaders
 import org.springframework.messaging.Message

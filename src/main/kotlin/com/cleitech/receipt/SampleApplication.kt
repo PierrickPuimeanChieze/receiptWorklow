@@ -1,28 +1,33 @@
 package com.cleitech.receipt
 
+import com.cleitech.receipt.handlers.OcrHandler
+import com.cleitech.receipt.handlers.DriveFileWritingHandler
+import com.cleitech.receipt.handlers.DropboxHandler
+import com.cleitech.receipt.services.DriveService
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.integration.channel.DirectChannel
-import org.springframework.integration.dsl.*
+import org.springframework.integration.dsl.IntegrationFlow
+import org.springframework.integration.dsl.IntegrationFlows
+import org.springframework.integration.dsl.Pollers
+import org.springframework.integration.dsl.SourcePollingChannelAdapterSpec
 import org.springframework.integration.file.FileReadingMessageSource
 import org.springframework.integration.file.FileWritingMessageHandler
-import org.springframework.integration.handler.LoggingHandler
 import org.springframework.integration.router.AbstractMessageRouter
 import org.springframework.messaging.Message
 import org.springframework.messaging.MessageChannel
+import org.springframework.security.oauth2.config.annotation.web.configuration.EnableOAuth2Client
 import java.io.File
 import java.util.function.Consumer
-import com.cleitech.receipt.handlers.DatamolinoHandler
-import com.cleitech.receipt.handlers.DriveFileWritingHandler
-import com.cleitech.receipt.handlers.DropboxHandler
 
 typealias MessageHandler = (Message<File>) -> Unit
 @SpringBootApplication
 @EnableConfigurationProperties(ServiceProperties::class)
 //@Import(GoogleConfiguration::class)
-class SampleIntegrationApplication() {
+@EnableOAuth2Client
+class SampleIntegrationApplication {
 
 
     @Bean
@@ -109,9 +114,9 @@ class SampleIntegrationApplication() {
     }
 
     @Bean
-    fun toOcr(datamolinoHandler: DatamolinoHandler): IntegrationFlow = IntegrationFlow { sf ->
+    fun toOcr(ocrHandler: OcrHandler): IntegrationFlow = IntegrationFlow { sf ->
         sf.channel(sendToOcr())
-                .handle(datamolinoHandler)
+                .handle(ocrHandler)
                 .channel(writeToDrive())
 
     }
