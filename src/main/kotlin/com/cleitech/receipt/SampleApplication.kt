@@ -24,7 +24,7 @@ import java.util.function.Consumer
 
 typealias MessageHandler = (Message<File>) -> Unit
 @SpringBootApplication
-@EnableConfigurationProperties(ServiceProperties::class)
+@EnableConfigurationProperties([ServiceProperties::class, ShoeboxedProperties::class])
 //@Import(GoogleConfiguration::class)
 @EnableOAuth2Client
 class SampleIntegrationApplication {
@@ -116,6 +116,7 @@ class SampleIntegrationApplication {
     @Bean
     fun toOcr(ocrHandler: OcrHandler): IntegrationFlow = IntegrationFlow { sf ->
         sf.channel(sendToOcr())
+
                 .handle(ocrHandler)
                 .channel(writeToDrive())
 

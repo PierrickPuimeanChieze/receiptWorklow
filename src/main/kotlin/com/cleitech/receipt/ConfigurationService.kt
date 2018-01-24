@@ -5,6 +5,7 @@ import com.beust.klaxon.JsonObject
 import com.beust.klaxon.Parser
 import com.beust.klaxon.string
 import org.springframework.stereotype.Component
+import java.time.Instant
 
 
 data class DriveToOCREntry(
@@ -13,6 +14,14 @@ data class DriveToOCREntry(
         val ocrCategory: String?,
         val dropboxDir:String?
 )
+
+data class ShoeboxedTokenInfo (var accessToken: String,
+                               val refreshToken: String,
+                               val tokenType: String,
+                               var expiresIn: Int,
+                               val scope: String,
+                               var lastRefresh : Instant)
+
 
 @Component
 class ConfigurationService {
@@ -30,7 +39,5 @@ class ConfigurationService {
 
             )
         }
-
     }
-
 }

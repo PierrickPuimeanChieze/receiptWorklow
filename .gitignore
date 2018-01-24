@@ -10,3 +10,4 @@ target/
 /*.json
 /*.properties
 !/driveToOcr.json
+dropboxAccessToken
