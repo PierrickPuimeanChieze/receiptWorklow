@@ -1,7 +1,9 @@
 package com.cleitech.receipt
 
+import com.cleitech.receipt.headers.DriveFileHeaders
 import com.cleitech.receipt.services.DriveService
 import com.google.api.services.drive.model.File
+import org.springframework.integration.IntegrationMessageHeaderAccessor
 import org.springframework.integration.context.IntegrationObjectSupport
 import org.springframework.integration.core.MessageSource
 import org.springframework.integration.file.FileHeaders
@@ -28,13 +30,14 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
 
 
         if (file != null && accept(file)) {
-            val withPayload = messageBuilderFactory.withPayload(file)
+            val payloadBuilder = messageBuilderFactory.withPayload(file)
+            //Here we map each file property to a header of the payload
             file.appProperties.forEach { key, value ->
-                withPayload.setHeader(key, value)
+                payloadBuilder.setHeader(key, value)
             }
-            withPayload.setHeader(FileHeaders.FILENAME, file.originalFilename)
-            message = withPayload.build()
-            if (logger.isInfoEnabled()) {
+            payloadBuilder.setHeader(FileHeaders.FILENAME, file.originalFilename)
+            message = payloadBuilder.build()
+            if (logger.isInfoEnabled) {
                 logger.info("Created message: [$message]")
             }
         }
@@ -43,15 +46,17 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
 
     private fun scanInputDirectory() {
         val driveToOcrEntries = this.configurationService.driveToOcrEntries()
-        driveToOcrEntries.forEach { entry ->
-            val files = driveService.retrieveFileToUpload(entry.toScanDirId).filter { accept(it) }
+        driveToOcrEntries.forEach { configurationEntry ->
+            val files = driveService.retrieveFileToUpload(configurationEntry.toScanDirId).filter { accept(it) }
             files.forEach { file ->
+                //Here we map configuration entry field to a file property
                 file.appProperties =
                         mapOf(
-                                DriveFileHeaders.DEST_DIR to entry.uploadedDirId,
-                                DriveFileHeaders.DROPBOX_DIR to entry.dropboxDir,
-                                DriveFileHeaders.OCR_CAT to entry.ocrCategory,
-                                FileHeaders.REMOTE_DIRECTORY to entry.toScanDirId
+                                DriveFileHeaders.DEST_DIR to configurationEntry.uploadedDirId,
+                                DriveFileHeaders.DROPBOX_PATH to configurationEntry.dropboxDir,
+                                DriveFileHeaders.OCR_CAT to configurationEntry.ocrCategory,
+                                FileHeaders.REMOTE_DIRECTORY to configurationEntry.toScanDirId,
+                                IntegrationMessageHeaderAccessor.CORRELATION_ID to configurationEntry.toScanDirId
                         )
 
             }

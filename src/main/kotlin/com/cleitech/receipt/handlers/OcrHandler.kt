@@ -1,26 +1,29 @@
 package com.cleitech.receipt.handlers
 
-import com.cleitech.receipt.DriveFileHeaders.OCR_CAT
+import com.cleitech.receipt.GoogleFile
+import com.cleitech.receipt.headers.OperationHeaders
 import com.cleitech.receipt.services.DriveService
 import com.cleitech.receipt.services.OcrService
-import com.google.api.services.drive.model.File
 import org.springframework.integration.annotation.ServiceActivator
 import org.springframework.messaging.Message
+import org.springframework.messaging.support.MessageBuilder
 import org.springframework.stereotype.Component
-import org.springframework.web.client.RestTemplate
 
+/**
+ * Manage the upload of a google file payload to an OCR service. Do not modify the payload
+ */
 @Component
 class OcrHandler(val ocrService: OcrService,
                  val driveService: DriveService) {
 
 
-    //TODO Fusionner OcRHandler & Service
     @ServiceActivator
-    fun uploadMessageToOCR(requestMessage: Message<File>): Message<File> {
+    fun uploadMessageToOCR(requestMessage: Message<GoogleFile>): Message<GoogleFile> {
         val inputStreamForFile = driveService.getInputStreamForFile(requestMessage.payload)
         ocrService.uploadFile(inputStreamForFile)
         inputStreamForFile.close()
-        return requestMessage
+        return MessageBuilder.fromMessage(requestMessage)
+                .setHeader(OperationHeaders.OCR_TREATMENT_SUCCESS, true).build()
     }
 
 }

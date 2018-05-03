@@ -1,4 +1,4 @@
-package com.cleitech.receipt
+package com.cleitech.receipt.properties
 
 import com.google.api.client.json.JsonFactory
 import com.google.api.client.json.jackson2.JacksonFactory

@@ -47,7 +47,7 @@ class DriveInitService(val jsonFactory: JsonFactory,
     }
 
     fun googleCredentials(): Credential {
-        val clientSecrets = GoogleClientSecrets.load(jsonFactory, FileReader("./client_secret_receipt.json"))
+        val clientSecrets = GoogleClientSecrets.load(jsonFactory, FileReader("./google_client_secret.json"))
 
 
         // Build flow and trigger user authorization request.

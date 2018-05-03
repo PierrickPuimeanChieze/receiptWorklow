@@ -2,12 +2,12 @@
 .gradle/
 .idea/
 build/
-*.iml
 input/
 out/
 output/
 target/
 /*.json
 /*.properties
-!/driveToOcr.json
+!/executionPath/driveToOcr.json
 dropboxAccessToken
+/executionPath/*

@@ -1,25 +1,29 @@
 package com.cleitech.receipt.services
 
-import com.beust.klaxon.Klaxon
 import com.cleitech.receipt.ShoeboxedTokenInfo
+import com.cleitech.receipt.properties.ShoeboxedProperties
 import com.cleitech.receipt.shoeboxed.domain.Document
 import com.cleitech.receipt.shoeboxed.domain.Documents
 import com.cleitech.receipt.shoeboxed.domain.ProcessingState
 import com.cleitech.receipt.shoeboxed.domain.User
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.commons.codec.binary.Base64
-import org.apache.commons.logging.LogFactory
-import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.io.FileSystemResource
 import org.springframework.http.*
-import org.springframework.http.client.ClientHttpRequestInterceptor
 import org.springframework.http.converter.FormHttpMessageConverter
 import org.springframework.http.converter.json.GsonHttpMessageConverter
+import org.springframework.stereotype.Service
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.UriComponentsBuilder
-import java.io.*
+import java.io.BufferedReader
+import java.io.File
+import java.io.IOException
+import java.io.InputStreamReader
 import java.nio.charset.Charset
 import java.nio.file.Path
 import java.time.Duration
@@ -29,44 +33,37 @@ import java.util.*
 /**
  * @author Pierrick Puimean-Chieze on 27-12-16.
  */
-class ShoeboxedService(private val redirectUrl: String,
-                       private val clientId: String,
-                       private val clientSecret: String,
-                       @Value("${shoeboxed.uploadProcessingState:NEEDS_SYSTEM_PROCESSING}")
-                       private val processingState: ProcessingState,
-                       private val accessTokenFile: File,
-                       private val username: String,
-                       private val password: String) {
+@Service
+class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper, @Autowired private val shoeboxedProperties: ShoeboxedProperties) {
 
 
-    var accessTokenInfo: ShoeboxedTokenInfo? = null
-        private set
+    private val accessTokenInfo: ShoeboxedTokenInfo
+
     private val restTemplate = RestTemplate()
-
+    private val redirectUrl: String = shoeboxedProperties.redirectUrl
+    private val clientId: String = shoeboxedProperties.clientId
+    private val clientSecret: String = shoeboxedProperties.clientSecret
+    private val processingState: ProcessingState = shoeboxedProperties.uploadProcessingState
     init {
+        val accessTokenFile: File = shoeboxedProperties.accessTokenFile
         val formHttpMessageConverter = FormHttpMessageConverter()
         restTemplate.messageConverters.add(formHttpMessageConverter)
         restTemplate.messageConverters.add(GsonHttpMessageConverter())
-        val interceptors = ArrayList<ClientHttpRequestInterceptor>()
+//        val interceptors = ArrayList<ClientHttpRequestInterceptor>()
 //        interceptors.add(LoggingRequestInterceptor())
-        restTemplate.interceptors = interceptors
-
-    }
-
-    fun initAccessToken() {
+//        restTemplate.interceptors = interceptors
 
         if (!accessTokenFile.exists()) {
             accessTokenInfo = retrieveAccessToken()
 
-            val toJsonString = Klaxon().toJsonString(accessTokenInfo!!)
-
-            accessTokenFile.writer().use { it.write(toJsonString) }
-
+            jacksonObjectMapper.writeValue(accessTokenFile, accessTokenInfo)
         } else {
-            accessTokenInfo = Klaxon().parse<ShoeboxedTokenInfo>(accessTokenFile)
+            accessTokenInfo = jacksonObjectMapper.readValue(accessTokenFile)
 
         }
+
     }
+
 
     /**
      * Allow to retrieve an acess token
@@ -106,8 +103,8 @@ class ShoeboxedService(private val redirectUrl: String,
         try {
             val exchange = restTemplate.exchange(tokenUrl, HttpMethod.POST, HttpEntity<ShoeboxedTokenInfo>(headers), ShoeboxedTokenInfo::class.java)
 
-            val shoeboxedTokenInfo = exchange.getBody()
-            shoeboxedTokenInfo!!.lastRefresh = lastRefresh
+            val shoeboxedTokenInfo = exchange.body!!
+            shoeboxedTokenInfo.lastRefresh = lastRefresh
             return shoeboxedTokenInfo
         } catch (ex: HttpClientErrorException) {
             println(ex.responseBodyAsString)
@@ -158,32 +155,32 @@ class ShoeboxedService(private val redirectUrl: String,
         refreshTokenIfNeeded()
         val headers = HttpHeaders()
         headers.accept = listOf(MediaType.APPLICATION_JSON)
-        headers.set("Authorization", "Bearer " + accessTokenInfo!!.accessToken)
+        headers.set("Authorization", "Bearer " + accessTokenInfo.accessToken)
         return headers
     }
 
     private fun refreshTokenIfNeeded() {
         val now = Instant.now()
 
-        val accessTokenLastRefresh = accessTokenInfo!!.lastRefresh
+        val accessTokenLastRefresh = accessTokenInfo.lastRefresh
 
         val secondsSinceLastRefresh = Duration.between(accessTokenLastRefresh, now).seconds
 
         val securityMargin = 0.9.toFloat()
-        if (secondsSinceLastRefresh > accessTokenInfo!!.expiresIn * securityMargin) {
+        if (secondsSinceLastRefresh > accessTokenInfo.expiresIn * securityMargin) {
             val tokenUrl = UriComponentsBuilder.fromUriString(TOKEN_URL)
                     .queryParam("grant_type", "refresh_token")
                     .queryParam("client_id", clientId)
                     .queryParam("client_secret", redirectUrl)
-                    .queryParam("refresh_token", accessTokenInfo!!.refreshToken)
+                    .queryParam("refresh_token", accessTokenInfo.refreshToken)
                     .build().toUriString()
 
             val refreshResponse = restTemplate.exchange(tokenUrl, HttpMethod.POST, HttpEntity<ShoeboxedTokenInfo>(buildHeadersFromClientInfo()), ShoeboxedTokenInfo::class.java)
-            if (refreshResponse.getStatusCode() == HttpStatus.OK) {
-                accessTokenInfo!!.lastRefresh = now
-                val partialTokenInfo = refreshResponse.getBody()
-                accessTokenInfo!!.accessToken = partialTokenInfo!!.accessToken
-                accessTokenInfo!!.expiresIn = partialTokenInfo!!.expiresIn
+            if (refreshResponse.statusCode == HttpStatus.OK) {
+                accessTokenInfo.lastRefresh = now
+                val partialTokenInfo = refreshResponse.body!!
+                accessTokenInfo.accessToken = partialTokenInfo.accessToken
+                accessTokenInfo.expiresIn = partialTokenInfo.expiresIn
             }
 
         }
@@ -203,8 +200,8 @@ class ShoeboxedService(private val redirectUrl: String,
         val exchange = restTemplate.exchange(usersAccountUri.build().toUri(),
                 HttpMethod.GET, entity, User::class.java)
 
-        val body = exchange.getBody()
-        return body!!.accounts[0].getId()
+        val body = exchange.body
+        return body!!.accounts[0].id
 
     }
 
@@ -230,7 +227,7 @@ class ShoeboxedService(private val redirectUrl: String,
         val url =getDocumentsAccountUri.buildAndExpand(retrieveAccountId()).toUri()
         val documentsResponse = restTemplate.exchange(url, HttpMethod.GET, entity, Documents::class.java)
 
-        return documentsResponse.getBody()!!.getDocuments()
+        return documentsResponse.body!!.documents
 
     }
 
@@ -238,7 +235,7 @@ class ShoeboxedService(private val redirectUrl: String,
 
         val getDocumentsAccountUri = UriComponentsBuilder.fromUriString("https://api.shoeboxed.com:443/v2/accounts/{accountId}/documents/{documentId}")
         val newMetadata = Document()
-        newMetadata.setCategories(categories)
+        newMetadata.categories = categories
 
         val entity = HttpEntity(newMetadata, buildHeadersFromAccessToken())
         val url = getDocumentsAccountUri.buildAndExpand(retrieveAccountId(), documentId).toUri()
@@ -247,7 +244,6 @@ class ShoeboxedService(private val redirectUrl: String,
     }
 
     companion object {
-        private val LOG = LogFactory.getLog(ShoeboxedService::class.java)
         private val TOKEN_URL = "https://id.shoeboxed.com/oauth/token"
         private val RESPONSE_TYPE = "code"
         private val SCOPE = "all"

@@ -1,5 +1,6 @@
 package com.cleitech.receipt
 
+import com.cleitech.receipt.properties.ServiceProperties
 import org.springframework.stereotype.Component
 
 @Component

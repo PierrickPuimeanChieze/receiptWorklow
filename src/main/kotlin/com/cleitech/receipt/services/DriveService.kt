@@ -1,8 +1,8 @@
 package com.cleitech.receipt.services
 
 
+import com.cleitech.receipt.GoogleFile
 import com.google.api.services.drive.Drive
-import com.google.api.services.drive.model.File
 import mu.KotlinLogging
 import org.springframework.stereotype.Component
 import java.io.IOException
@@ -68,9 +68,9 @@ class DriveService(val driveInitService: DriveInitService) {
     }
 
     @Throws(IOException::class)
-    fun retrieveFileToUpload(toUploadDirId: String): Set<File> {
+    fun retrieveFileToUpload(toUploadDirId: String): Set<GoogleFile> {
         LOG.debug("Retrieve files from " + toUploadDirId)
-        val wholeSet = HashSet<File>()
+        val wholeSet = HashSet<GoogleFile>()
 
         var fileResult = drive.files().list()
                 .set("q", "'$toUploadDirId' in parents")
@@ -98,7 +98,7 @@ class DriveService(val driveInitService: DriveInitService) {
     }
 
 
-    fun getInputStreamForFile(file: File): InputStream =
+    fun getInputStreamForFile(file: GoogleFile): InputStream =
             drive.files().get(file.id).executeMediaAsInputStream()
 
 }

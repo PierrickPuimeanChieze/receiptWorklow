@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:int-mail="http://www.springframework.org/schema/integration/mail"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation=
+               "http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+               http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+               http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+            http://www.springframework.org/schema/integration/mail http://www.springframework.org/schema/integration/mail/spring-integration-mail.xsd"
+>
+
+
+    <int:publish-subscribe-channel id="writedToOcr">
+        <int:interceptors>
+            <int:wire-tap channel="writeToDrive"/>
+        </int:interceptors>
+    </int:publish-subscribe-channel>
+    <int:publish-subscribe-channel id="writedToDropbox">
+        <int:interceptors>
+            <int:wire-tap channel="writeToDrive"/>
+        </int:interceptors>
+    </int:publish-subscribe-channel>
+    <int:channel id="writeToDropbox">
+        <int:interceptors>
+            <int:wire-tap channel="writeToDrive"/>
+        </int:interceptors>
+
+    </int:channel>
+    <int:inbound-channel-adapter ref="driveFileReadingSource" channel="readFromDrive">
+
+    </int:inbound-channel-adapter>
+
+    <int:recipient-list-router id="flowRouter" input-channel="readFromDrive">
+        <int:recipient channel="writeToOcr"
+                       selector-expression="headers.containsKey(T(com.cleitech.receipt.headers.DriveFileHeaders).OCR_CAT)"/>
+        <int:recipient channel="writeToDropbox"
+                       selector-expression="headers.containsKey(T(com.cleitech.receipt.headers.DriveFileHeaders).DROPBOX_PATH)"/>
+    </int:recipient-list-router>
+
+    <int:service-activator id="dropBoxWriter" ref="dropboxHandler" input-channel="writeToDropbox"
+                           output-channel="writedToDropbox"/>
+
+    <int:service-activator id="ocrWriter" ref="ocrHandler" input-channel="writeToOcr" output-channel="writedToOcr"/>
+
+    <int:service-activator id="driveWriter" ref="driveFileWritingHandler" input-channel="writeToDrive"/>
+
+    <int:aggregator id="ocrMailAggregator"
+                    input-channel="writedToOcr"
+                    expire-groups-upon-completion="true"
+                    send-partial-result-on-expiry="true"
+                    group-timeout="${receipt-workflow.mail.aggregation_wait}"
+                    output-channel="mailToSend"
+                    ref="ocrMailMessageGroupProcessor"
+    >
+    </int:aggregator>
+
+    <int:aggregator id="dropboxMailAggregator"
+                    input-channel="writedToDropbox"
+                    expire-groups-upon-completion="true"
+                    send-partial-result-on-expiry="true"
+                    group-timeout="${receipt-workflow.mail.aggregation_wait}"
+                    output-channel="mailToSend"
+                    ref="dropboxMailMessageGroupProcessor"
+    >
+    </int:aggregator>
+
+    <int-mail:outbound-channel-adapter
+            channel="mailToSend"
+            host="${receipt-workflow.mail.smtp.host}"
+            port="587"
+            username="${receipt-workflow.mail.smtp.username}"
+            password="${receipt-workflow.mail.smtp.password}"
+            java-mail-properties="javaMailProperties"/>
+    <int:poller default="true" fixed-delay="50"/>
+    <util:properties id="javaMailProperties">
+        <prop key="mail.debug">true</prop>
+        <prop key="mail.smtps.auth">true</prop>
+        <prop key="mail.smtp.starttls.enable">true</prop>
+    </util:properties>
+
+</beans>

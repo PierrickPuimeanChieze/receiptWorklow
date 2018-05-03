@@ -1,4 +1,4 @@
-package com.cleitech.receipt;
+package com.cleitech.receipt.properties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.jmx.export.annotation.ManagedAttribute;
@@ -6,6 +6,7 @@ import org.springframework.jmx.export.annotation.ManagedResource;
 
 @ConfigurationProperties(prefix = "service", ignoreUnknownFields = false)
 @ManagedResource
+
 public class ServiceProperties {
 
     private String greeting = "Hello";
