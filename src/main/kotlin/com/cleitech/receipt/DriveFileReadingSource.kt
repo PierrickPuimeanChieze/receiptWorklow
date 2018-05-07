@@ -56,7 +56,9 @@ class DriveFileReadingSource(val driveService: DriveService, val configurationSe
                                 DriveFileHeaders.DROPBOX_PATH to configurationEntry.dropboxDir,
                                 DriveFileHeaders.OCR_CAT to configurationEntry.ocrCategory,
                                 FileHeaders.REMOTE_DIRECTORY to configurationEntry.toScanDirId,
-                                IntegrationMessageHeaderAccessor.CORRELATION_ID to configurationEntry.toScanDirId
+                                IntegrationMessageHeaderAccessor.CORRELATION_ID to configurationEntry.toScanDirId,
+                                DriveFileHeaders.SOURCE_DIR_LABEL to configurationEntry.toScanDirLabel
+
                         )
 
             }

@@ -10,7 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.commons.codec.binary.Base64
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.core.io.FileSystemResource
+import org.springframework.context.annotation.Profile
+import org.springframework.core.io.InputStreamResource
 import org.springframework.http.*
 import org.springframework.http.converter.FormHttpMessageConverter
 import org.springframework.http.converter.json.GsonHttpMessageConverter
@@ -20,12 +21,8 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.UriComponentsBuilder
-import java.io.BufferedReader
-import java.io.File
-import java.io.IOException
-import java.io.InputStreamReader
+import java.io.*
 import java.nio.charset.Charset
-import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -34,7 +31,9 @@ import java.util.*
  * @author Pierrick Puimean-Chieze on 27-12-16.
  */
 @Service
-class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper, @Autowired private val shoeboxedProperties: ShoeboxedProperties) {
+@Profile("ocr-shoeboxed")
+class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper,
+                       @Autowired private val shoeboxedProperties: ShoeboxedProperties) : OcrService {
 
 
     private val accessTokenInfo: ShoeboxedTokenInfo
@@ -131,15 +130,14 @@ class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper, @Autowired 
      * @param tempFileName the path to thedocument to upload
      * @return the status of the upload
      */
-    fun uploadDocument(tempFileName: Path): HttpStatus {
+    override fun uploadDocument(documentContent: InputStream) {
 
         val uriComponentsBuilder = UriComponentsBuilder.fromUriString("https://api.shoeboxed.com/v2/accounts/{accountId}/documents/?")
         //        final UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString("http://localhost:9999/test");
         val url = uriComponentsBuilder.buildAndExpand(retrieveAccountId()).toUriString()
 
 
-        val file = tempFileName.toFile()
-        val resourceToUpload = FileSystemResource(file)
+        val resourceToUpload = InputStreamResource(documentContent)
         val body = LinkedMultiValueMap<String, Any>()
         body.add("attachment", resourceToUpload)
         body.add("document", "{ \"processingState\": \"" +
@@ -148,7 +146,9 @@ class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper, @Autowired 
         val entity = HttpEntity<MultiValueMap<String, Any>>(body, buildHeadersFromAccessToken())
         val stringResponseEntity = restTemplate.postForEntity(url, entity, String::class.java)
 
-        return stringResponseEntity.statusCode
+        if (stringResponseEntity.statusCode !in listOf(HttpStatus.ACCEPTED, HttpStatus.CREATED, HttpStatus.OK)) {
+            throw OcrException("Bad status code when uploading file : ${stringResponseEntity}")
+        }
     }
 
     private fun buildHeadersFromAccessToken(): HttpHeaders {

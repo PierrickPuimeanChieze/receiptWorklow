@@ -4,18 +4,20 @@ import com.cleitech.receipt.shoeboxed.domain.ProcessingState;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import javax.validation.constraints.NotBlank;
 import java.io.File;
 
 @ConfigurationProperties(prefix = "shoeboxed", ignoreUnknownFields = false)
 @Configuration
 public class ShoeboxedProperties {
 
+    @NotBlank
     private String clientId;
+    @NotBlank
     private String clientSecret;
     private ProcessingState uploadProcessingState = ProcessingState.NEEDS_SYSTEM_PROCESSING;
+    @NotBlank
     private String redirectUrl;
-    private String username;
-    private String password;
     private String toSentCategory;
     private File accessTokenFile;
 
@@ -58,22 +60,6 @@ public class ShoeboxedProperties {
 
     public void setRedirectUrl(String redirectUrl) {
         this.redirectUrl = redirectUrl;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getToSentCategory() {

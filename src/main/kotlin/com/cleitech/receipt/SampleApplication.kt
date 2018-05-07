@@ -93,7 +93,7 @@ class SampleIntegrationApplication {
      */
     @Bean
     fun ocrHandler(ocrService: OcrService,
-                   driveService: DriveService) = OcrHandler(ocrService, driveService)
+                   driveService: DriveService, logChannel: MessageChannel) = OcrHandler(ocrService, driveService, logChannel)
 
 
     @Bean

@@ -12,6 +12,7 @@ import java.time.Instant
 
 data class DriveToOCREntry(
         val toScanDirId: String,
+        val toScanDirLabel: String?,
         val uploadedDirId: String,
         val ocrCategory: String?,
         val dropboxDir: String?

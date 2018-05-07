@@ -27,6 +27,7 @@
         </int:interceptors>
 
     </int:channel>
+    <int:channel id="logChannel"/>
     <int:inbound-channel-adapter ref="driveFileReadingSource" channel="readFromDrive">
 
     </int:inbound-channel-adapter>
@@ -42,6 +43,8 @@
                            output-channel="writedToDropbox"/>
 
     <int:service-activator id="ocrWriter" ref="ocrHandler" input-channel="writeToOcr" output-channel="writedToOcr"/>
+
+    <int:logging-channel-adapter id="logger" level="DEBUG" channel="logChannel"/>
 
     <int:service-activator id="driveWriter" ref="driveFileWritingHandler" input-channel="writeToDrive"/>
 
@@ -65,6 +68,7 @@
     >
     </int:aggregator>
 
+    <int:filter id="filterOcrError" input-channel="writedToOcr" output-channel="writeToDrive" ref="filterOcrStatus"/>
     <int-mail:outbound-channel-adapter
             channel="mailToSend"
             host="${receipt-workflow.mail.smtp.host}"
