@@ -11,11 +11,6 @@
 >
 
 
-    <int:publish-subscribe-channel id="writedToOcr">
-        <int:interceptors>
-            <int:wire-tap channel="writeToDrive"/>
-        </int:interceptors>
-    </int:publish-subscribe-channel>
     <int:publish-subscribe-channel id="writedToDropbox">
         <int:interceptors>
             <int:wire-tap channel="writeToDrive"/>
@@ -44,7 +39,7 @@
 
     <int:service-activator id="ocrWriter" ref="ocrHandler" input-channel="writeToOcr" output-channel="writedToOcr"/>
 
-    <int:logging-channel-adapter id="logger" level="DEBUG" channel="logChannel"/>
+    <int:logging-channel-adapter id="logger" level="ERROR" channel="logChannel"/>
 
     <int:service-activator id="driveWriter" ref="driveFileWritingHandler" input-channel="writeToDrive"/>
 
@@ -68,7 +63,11 @@
     >
     </int:aggregator>
 
-    <int:filter id="filterOcrError" input-channel="writedToOcr" output-channel="writeToDrive" ref="filterOcrStatus"/>
+    <!-- filter paylod on header. header OperationHeaders.OCR_TREATMENT_SUCCESS should be set to true -->
+    <int:filter id="filterOcrError"
+                input-channel="writedToOcr"
+                output-channel="writeToDrive"
+                ref="ocrErrorFilter"/>
     <int-mail:outbound-channel-adapter
             channel="mailToSend"
             host="${receipt-workflow.mail.smtp.host}"

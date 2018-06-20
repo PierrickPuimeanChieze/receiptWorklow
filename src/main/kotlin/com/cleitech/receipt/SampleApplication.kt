@@ -3,6 +3,7 @@ package com.cleitech.receipt
 import com.cleitech.receipt.handlers.DriveFileWritingHandler
 import com.cleitech.receipt.handlers.OcrHandler
 import com.cleitech.receipt.headers.DriveFileHeaders
+import com.cleitech.receipt.headers.OperationHeaders
 import com.cleitech.receipt.properties.ServiceProperties
 import com.cleitech.receipt.properties.ShoeboxedProperties
 import com.cleitech.receipt.services.DriveService
@@ -13,6 +14,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ImportResource
 import org.springframework.integration.channel.DirectChannel
+import org.springframework.integration.core.MessageSelector
 import org.springframework.integration.dsl.IntegrationFlow
 import org.springframework.integration.file.FileWritingMessageHandler
 import org.springframework.integration.router.AbstractMessageRouter
@@ -83,7 +85,7 @@ class SampleIntegrationApplication {
      * This flow read payload sent to writeToDrive channel and write them to Google Drive directory
      */
     @Bean
-    fun writeToDriveFlow(driveFileWritingHandler: DriveFileWritingHandler) = IntegrationFlow { sf ->
+    fun writeToDriveFlow(driveFileWritingHandler: DriveFileWritingHandler): IntegrationFlow = IntegrationFlow { sf ->
         sf.channel(writeToDrive())
                 .handle(driveFileWritingHandler)
     }
@@ -108,8 +110,16 @@ class SampleIntegrationApplication {
             to = "pierrick.puimean@gmail.com",
             from = "pierrick.puimean@gmail.com")
 
-}
+    /**
+     * Will filter message based on value of header OperationHeaders.OCR_TREATMENT_SUCCESS
+     * if header is absent, will throw a null pointer exception as it should not happen
+     */
+    @Bean
+    fun ocrErrorFilter(): MessageSelector = MessageSelector { e ->
+        e.headers[OperationHeaders.OCR_TREATMENT_SUCCESS]!! as Boolean
+    }
 
+}
 
 
 fun main(args: Array<String>) {
