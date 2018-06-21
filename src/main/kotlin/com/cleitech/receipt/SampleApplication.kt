@@ -8,6 +8,9 @@ import com.cleitech.receipt.properties.ServiceProperties
 import com.cleitech.receipt.properties.ShoeboxedProperties
 import com.cleitech.receipt.services.DriveService
 import com.cleitech.receipt.services.OcrService
+import com.cleitech.receipt.services.ShoeboxedService
+import com.cleitech.receipt.source.DriveFileReadingSource
+import com.cleitech.receipt.source.ShoeboxedFileReadingSource
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -33,6 +36,9 @@ class SampleIntegrationApplication {
 
     @Bean("driveFileReadingSource")
     fun driveFileReadingSource(driveService: DriveService, confService: ConfigurationService): DriveFileReadingSource = DriveFileReadingSource(driveService, confService)
+
+    @Bean("ocrFileReadingSource")
+    fun ocrFileReadingSource(shoeboxedService: ShoeboxedService): ShoeboxedFileReadingSource = ShoeboxedFileReadingSource(shoeboxedService)
 
     @Bean("driveFileWritingHandler")
     fun driveFileWritingHandler(driveService: DriveService): DriveFileWritingHandler = DriveFileWritingHandler(driveService)

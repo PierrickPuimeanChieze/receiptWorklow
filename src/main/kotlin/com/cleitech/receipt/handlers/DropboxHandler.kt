@@ -15,3 +15,9 @@ class DropboxHandler {
     }
 
 }
+
+fun uploadByteArrayToDropbox(requestMessage: Message<ByteArray>): Message<ByteArray> {
+    //TODO
+    println("Copying file to dropbox in directory :" + requestMessage.headers[DriveFileHeaders.DROPBOX_PATH])
+    return requestMessage
+}

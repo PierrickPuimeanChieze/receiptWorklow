@@ -11,21 +11,18 @@
 >
 
 
-    <int:publish-subscribe-channel id="writedToDropbox">
-        <int:interceptors>
-            <int:wire-tap channel="writeToDrive"/>
-        </int:interceptors>
-    </int:publish-subscribe-channel>
-    <int:channel id="writeToDropbox">
-        <int:interceptors>
-            <int:wire-tap channel="writeToDrive"/>
-        </int:interceptors>
+    <int:publish-subscribe-channel id="writedToDropbox"/>
 
-    </int:channel>
+    <int:channel id="writeToDropbox"/>
+
     <int:channel id="logChannel"/>
-    <int:inbound-channel-adapter ref="driveFileReadingSource" channel="readFromDrive">
-
-    </int:inbound-channel-adapter>
+    <int:channel id="readFromOcr">
+        <int:interceptors>
+            <int:wire-tap channel="writeToDropbox"/>
+        </int:interceptors>
+    </int:channel>
+    <int:inbound-channel-adapter ref="driveFileReadingSource" channel="readFromDrive"/>
+    <int:inbound-channel-adapter ref="ocrFileReadingSource" channel="readFromOcr"/>
 
     <int:recipient-list-router id="flowRouter" input-channel="readFromDrive">
         <int:recipient channel="writeToOcr"
@@ -68,6 +65,14 @@
                 input-channel="writedToOcr"
                 output-channel="writeToDrive"
                 ref="ocrErrorFilter"/>
+
+    <!--
+        filter payload which have been writed to dropbox and which need to be write to dropbox... or not
+    -->
+    <int:filter id="writedToDropboxFilter"
+                input-channel="writedToDropbox"
+                output-channel="writeToDrive"
+                expression="headers.containsKey(T(com.cleitech.receipt.headers.DriveFileHeaders).DEST_DIR)"/>
     <int-mail:outbound-channel-adapter
             channel="mailToSend"
             host="${receipt-workflow.mail.smtp.host}"

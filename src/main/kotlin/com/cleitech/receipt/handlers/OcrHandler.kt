@@ -24,7 +24,7 @@ class OcrHandler(private val ocrService: OcrService,
         val inputStreamForFile = driveService.getInputStreamForFile(requestMessage.payload)
         inputStreamForFile.use {
             try {
-                ocrService.uploadDocument(inputStreamForFile)
+                ocrService.uploadDocument(it)
                 return MessageBuilder.fromMessage(requestMessage)
                         .setHeader(OperationHeaders.OCR_TREATMENT_SUCCESS, true).build()
             } catch (e: Exception) {

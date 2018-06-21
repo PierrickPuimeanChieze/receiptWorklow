@@ -1,5 +1,6 @@
-package com.cleitech.receipt
+package com.cleitech.receipt.source
 
+import com.cleitech.receipt.ConfigurationService
 import com.cleitech.receipt.headers.DriveFileHeaders
 import com.cleitech.receipt.services.DriveService
 import com.google.api.services.drive.model.File
