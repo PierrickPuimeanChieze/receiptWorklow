@@ -1,13 +1,12 @@
 package com.cleitech.receipt.services
 
+import com.cleitech.receipt.ShoeboxedAuthenticateDao
 import com.cleitech.receipt.ShoeboxedTokenInfo
 import com.cleitech.receipt.properties.ShoeboxedProperties
 import com.cleitech.receipt.shoeboxed.domain.Document
 import com.cleitech.receipt.shoeboxed.domain.Documents
 import com.cleitech.receipt.shoeboxed.domain.ProcessingState
 import com.cleitech.receipt.shoeboxed.domain.User
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import org.apache.commons.codec.binary.Base64
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Profile
@@ -21,7 +20,8 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.UriComponentsBuilder
-import java.io.*
+import java.io.IOException
+import java.io.InputStream
 import java.nio.charset.Charset
 import java.time.Duration
 import java.time.Instant
@@ -32,11 +32,9 @@ import java.util.*
  */
 @Service
 @Profile("ocr-shoeboxed")
-class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper,
-                       @Autowired private val shoeboxedProperties: ShoeboxedProperties) : OcrService {
+class ShoeboxedService(@Autowired private val shoeboxedProperties: ShoeboxedProperties,
+                       @Autowired private val shoeboxedAuthenticateDao: ShoeboxedAuthenticateDao) : OcrService {
 
-
-    private val accessTokenInfo: ShoeboxedTokenInfo
 
     private val restTemplate = RestTemplate()
     private val redirectUrl: String = shoeboxedProperties.redirectUrl
@@ -44,22 +42,9 @@ class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper,
     private val clientSecret: String = shoeboxedProperties.clientSecret
     private val processingState: ProcessingState = shoeboxedProperties.uploadProcessingState
     init {
-        val accessTokenFile: File = shoeboxedProperties.accessTokenFile
         val formHttpMessageConverter = FormHttpMessageConverter()
         restTemplate.messageConverters.add(formHttpMessageConverter)
         restTemplate.messageConverters.add(GsonHttpMessageConverter())
-//        val interceptors = ArrayList<ClientHttpRequestInterceptor>()
-//        interceptors.add(LoggingRequestInterceptor())
-//        restTemplate.interceptors = interceptors
-
-        if (!accessTokenFile.exists()) {
-            accessTokenInfo = retrieveAccessToken()
-
-            jacksonObjectMapper.writeValue(accessTokenFile, accessTokenInfo)
-        } else {
-            accessTokenInfo = jacksonObjectMapper.readValue(accessTokenFile)
-
-        }
 
     }
 
@@ -70,21 +55,7 @@ class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper,
      * @return the access token to retrieve
      */
     @Throws(IOException::class)
-    private fun retrieveAccessToken(): ShoeboxedTokenInfo {
-        val oauthUrl = UriComponentsBuilder.fromUriString("http://id.shoeboxed.com/oauth/authorize")
-                .queryParam("client_id", clientId)
-                .queryParam("response_type", RESPONSE_TYPE)
-                .queryParam("scope", SCOPE)
-                .queryParam("redirect_uri", redirectUrl)
-                .queryParam("state", "CRT")
-                .build().toUriString()
-
-
-        // This will block for the page load and any
-        // associated AJAX requests
-        println("go to URL " + oauthUrl)
-        println("\n")
-        val code = BufferedReader(InputStreamReader(System.`in`)).readLine() ?: throw RuntimeException("code==null")
+    fun retrieveAndWriteAccessToken(code: String) {
 
         val lastRefresh = Instant.now()
 
@@ -97,14 +68,12 @@ class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper,
 
         val headers = buildHeadersFromClientInfo()
 
-
-        println("trying to acess :" + tokenUrl)
         try {
             val exchange = restTemplate.exchange(tokenUrl, HttpMethod.POST, HttpEntity<ShoeboxedTokenInfo>(headers), ShoeboxedTokenInfo::class.java)
 
             val shoeboxedTokenInfo = exchange.body!!
             shoeboxedTokenInfo.lastRefresh = lastRefresh
-            return shoeboxedTokenInfo
+            shoeboxedAuthenticateDao.storeTokenInfo(shoeboxedTokenInfo)
         } catch (ex: HttpClientErrorException) {
             println(ex.responseBodyAsString)
             throw ex
@@ -155,19 +124,29 @@ class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper,
         refreshTokenIfNeeded()
         val headers = HttpHeaders()
         headers.accept = listOf(MediaType.APPLICATION_JSON)
-        headers.set("Authorization", "Bearer " + accessTokenInfo.accessToken)
+        headers.set("Authorization", "Bearer " + shoeboxedAuthenticateDao.getAccessToken())
         return headers
     }
 
     private fun refreshTokenIfNeeded() {
+        if (!shoeboxedAuthenticateDao.isTokenInfoAvailable()) {
+            throw IllegalStateException("No Shoeboxed authentication available")
+        }
+
         val now = Instant.now()
 
+
+        val accessTokenInfo = shoeboxedAuthenticateDao.getTokenInfo()
         val accessTokenLastRefresh = accessTokenInfo.lastRefresh
-
+        var expiresIn = accessTokenInfo.expiresIn
         val secondsSinceLastRefresh = Duration.between(accessTokenLastRefresh, now).seconds
+        if (secondsSinceLastRefresh > expiresIn) {
+            throw IllegalStateException("Shoeboxed authentication information stale. Please reauthenticate")
+        }
 
-        val securityMargin = 0.9.toFloat()
-        if (secondsSinceLastRefresh > accessTokenInfo.expiresIn * securityMargin) {
+        val securityMargin = 0.9F
+
+        if (secondsSinceLastRefresh > expiresIn * securityMargin) {
             val tokenUrl = UriComponentsBuilder.fromUriString(TOKEN_URL)
                     .queryParam("grant_type", "refresh_token")
                     .queryParam("client_id", clientId)
@@ -181,6 +160,7 @@ class ShoeboxedService(@Autowired jacksonObjectMapper: ObjectMapper,
                 val partialTokenInfo = refreshResponse.body!!
                 accessTokenInfo.accessToken = partialTokenInfo.accessToken
                 accessTokenInfo.expiresIn = partialTokenInfo.expiresIn
+                shoeboxedAuthenticateDao.storeTokenInfo(accessTokenInfo)
             }
 
         }
