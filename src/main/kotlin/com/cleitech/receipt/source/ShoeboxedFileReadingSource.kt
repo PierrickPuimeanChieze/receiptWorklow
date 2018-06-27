@@ -1,7 +1,7 @@
 package com.cleitech.receipt.source
 
 import com.cleitech.receipt.headers.DriveFileHeaders
-import com.cleitech.receipt.services.ShoeboxedService
+import com.cleitech.receipt.shoeboxed.ShoeboxedService
 import com.cleitech.receipt.shoeboxed.domain.Document
 import org.springframework.integration.context.IntegrationObjectSupport
 import org.springframework.integration.core.MessageSource

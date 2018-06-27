@@ -1,8 +1,9 @@
-package com.cleitech.receipt.services
+package com.cleitech.receipt.shoeboxed
 
-import com.cleitech.receipt.ShoeboxedAuthenticateDao
 import com.cleitech.receipt.ShoeboxedTokenInfo
 import com.cleitech.receipt.properties.ShoeboxedProperties
+import com.cleitech.receipt.services.OcrException
+import com.cleitech.receipt.services.OcrService
 import com.cleitech.receipt.shoeboxed.domain.Document
 import com.cleitech.receipt.shoeboxed.domain.Documents
 import com.cleitech.receipt.shoeboxed.domain.ProcessingState

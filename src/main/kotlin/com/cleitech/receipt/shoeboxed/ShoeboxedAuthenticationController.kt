@@ -1,7 +1,6 @@
-package com.cleitech.receipt
+package com.cleitech.receipt.shoeboxed
 
 import com.cleitech.receipt.properties.ShoeboxedProperties
-import com.cleitech.receipt.services.ShoeboxedService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -30,8 +29,8 @@ class ShoeboxedAuthenticationController(@Autowired private val shoeboxedProperti
 
         val oauthUrl = UriComponentsBuilder.fromUriString("http://id.shoeboxed.com/oauth/authorize")
                 .queryParam("client_id", clientId)
-                .queryParam("response_type", ShoeboxedAuthenticationController.RESPONSE_TYPE)
-                .queryParam("scope", ShoeboxedAuthenticationController.SCOPE)
+                .queryParam("response_type", RESPONSE_TYPE)
+                .queryParam("scope", SCOPE)
                 .queryParam("redirect_uri", redirectUrl)
                 .queryParam("state", "CRT")
                 .build().toUriString()

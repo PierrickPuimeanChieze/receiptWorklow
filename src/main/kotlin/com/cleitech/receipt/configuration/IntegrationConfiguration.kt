@@ -10,7 +10,7 @@ import com.cleitech.receipt.properties.ServiceProperties
 import com.cleitech.receipt.properties.ShoeboxedProperties
 import com.cleitech.receipt.services.DriveService
 import com.cleitech.receipt.services.OcrService
-import com.cleitech.receipt.services.ShoeboxedService
+import com.cleitech.receipt.shoeboxed.ShoeboxedService
 import com.cleitech.receipt.source.DriveFileReadingSource
 import com.cleitech.receipt.source.ShoeboxedFileReadingSource
 import org.springframework.boot.context.properties.EnableConfigurationProperties
