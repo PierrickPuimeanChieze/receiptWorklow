@@ -32,7 +32,8 @@ class ShoeboxedFileReadingSource(val shoeboxedService: ShoeboxedService) : Integ
 
         if (file != null && accept(file)) {
 
-            val payloadBuilder = messageBuilderFactory.withPayload(file.attachment.url.readBytes())
+            val payloadBuilder = messageBuilderFactory.withPayload(file.attachment!!.url!!.readBytes())
+
 
             payloadBuilder.setHeader(DriveFileHeaders.DROPBOX_PATH, DROPBOX_PATH)
             message = payloadBuilder.build()
@@ -66,7 +67,7 @@ class ShoeboxedFileReadingSource(val shoeboxedService: ShoeboxedService) : Integ
 //                    this.seen.add(file)
 //                }
 //            }
-            this.seenSet.add(file.id)
+            this.seenSet.add(file.id!!)
             return true
         }
     }

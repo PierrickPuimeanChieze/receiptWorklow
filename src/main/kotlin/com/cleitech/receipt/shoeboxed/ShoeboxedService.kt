@@ -4,15 +4,14 @@ import com.cleitech.receipt.ShoeboxedTokenInfo
 import com.cleitech.receipt.properties.ShoeboxedProperties
 import com.cleitech.receipt.services.OcrException
 import com.cleitech.receipt.services.OcrService
-import com.cleitech.receipt.shoeboxed.domain.Document
-import com.cleitech.receipt.shoeboxed.domain.Documents
-import com.cleitech.receipt.shoeboxed.domain.ProcessingState
-import com.cleitech.receipt.shoeboxed.domain.User
+import com.cleitech.receipt.shoeboxed.domain.*
 import org.apache.commons.codec.binary.Base64
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Profile
 import org.springframework.core.io.InputStreamResource
 import org.springframework.http.*
+import org.springframework.http.client.ClientHttpRequestExecution
+import org.springframework.http.client.ClientHttpRequestInterceptor
 import org.springframework.http.converter.FormHttpMessageConverter
 import org.springframework.http.converter.json.GsonHttpMessageConverter
 import org.springframework.stereotype.Service
@@ -46,6 +45,17 @@ class ShoeboxedService(@Autowired private val shoeboxedProperties: ShoeboxedProp
         val formHttpMessageConverter = FormHttpMessageConverter()
         restTemplate.messageConverters.add(formHttpMessageConverter)
         restTemplate.messageConverters.add(GsonHttpMessageConverter())
+        val authenticationInterceptor = ClientHttpRequestInterceptor { request: HttpRequest, body: ByteArray, execution: ClientHttpRequestExecution ->
+            if (!request.uri.toString().startsWith(TOKEN_URL)) {
+                refreshTokenIfNeeded()
+                request.headers.accept = listOf(MediaType.APPLICATION_JSON)
+                val token = shoeboxedAuthenticateDao.getAccessToken()
+                request.headers.add("Authorization", "Bearer $token")
+            }
+            execution.execute(request, body)
+        }
+
+        restTemplate.interceptors.add(authenticationInterceptor)
 
     }
 
@@ -121,6 +131,15 @@ class ShoeboxedService(@Autowired private val shoeboxedProperties: ShoeboxedProp
         }
     }
 
+    fun getCategories(accountId: String): LinkedList<Category> {
+        val uri = UriComponentsBuilder.fromUriString("https://api.shoeboxed.com/v2//accounts/{account}/categories/?")
+                .buildAndExpand(accountId).toUri()
+
+        val responseEntity = restTemplate.getForEntity(uri, Categories::class.java)
+        return responseEntity.body?.categories ?: LinkedList()
+
+    }
+
     private fun buildHeadersFromAccessToken(): HttpHeaders {
         refreshTokenIfNeeded()
         val headers = HttpHeaders()
@@ -173,18 +192,19 @@ class ShoeboxedService(@Autowired private val shoeboxedProperties: ShoeboxedProp
      *
      * @return the first accounts Id
      */
-    private fun retrieveAccountId(): String {
+    fun retrieveAccountId(): String {
 
         val usersAccountUri = UriComponentsBuilder.fromUriString("https://api.shoeboxed.com:443/v2/user/")
-        val entity = HttpEntity<User>(buildHeadersFromAccessToken())
 
-        val exchange = restTemplate.exchange(usersAccountUri.build().toUri(),
-                HttpMethod.GET, entity, User::class.java)
+        val exchange = restTemplate.getForEntity(usersAccountUri.build().toUri(),
+                User::class.java)
 
         val body = exchange.body
-        return body!!.accounts[0].id
+        return body!!.accounts[0].id!!
 
     }
+
+    fun retrieveCategory(accountId: String, categoryName: String): Category? = getCategories(accountId).find { category -> category.name.equals(categoryName) }
 
     /**
      * Allow to retrieve document
@@ -192,21 +212,21 @@ class ShoeboxedService(@Autowired private val shoeboxedProperties: ShoeboxedProp
      * @param categoryFilter the category of the searched document
      * @return the list of Document
      */
-    fun retrieveDocument(categoryFilter: String): LinkedList<Document> {
+    fun retrieveDocument(accountId: String, categoryFilter: String? = null): LinkedList<Document> {
 
         val getDocumentsAccountUri = UriComponentsBuilder.fromUriString("https://api.shoeboxed.com:443/v2/accounts/{accountId}/documents/")
                 .queryParam("limit", 100)
                 .queryParam("type", "receipt")
-                .queryParam("category", categoryFilter)
                 .queryParam("trashed", false)
-
-        val entity = HttpEntity<Documents>((buildHeadersFromAccessToken()))
+        if (categoryFilter != null) {
+            getDocumentsAccountUri.queryParam("category", categoryFilter)
+        }
 
         //TODO extract the use of retrieveAccountId
         //We retrieve the documents metadata
 
-        val url =getDocumentsAccountUri.buildAndExpand(retrieveAccountId()).toUri()
-        val documentsResponse = restTemplate.exchange(url, HttpMethod.GET, entity, Documents::class.java)
+        val url = getDocumentsAccountUri.buildAndExpand(accountId).toUri()
+        val documentsResponse = restTemplate.getForEntity(url, Documents::class.java)
 
         return documentsResponse.body!!.documents
 

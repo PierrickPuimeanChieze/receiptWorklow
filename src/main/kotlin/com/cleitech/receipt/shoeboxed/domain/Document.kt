@@ -7,7 +7,7 @@ import java.util.*
  * @author Pierrick Puimean-Chieze on 23-04-16.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-class Document {
+data class Document(val id: String? = null) {
 
 
     var attachment: Attachment? = null
@@ -21,20 +21,5 @@ class Document {
     var categories: List<String>? = null
     var type: String? = null
 
-    var id: String? = null
 
-    override fun toString(): String {
-        return "Document{" +
-                "attachment=" + attachment +
-                ", total=" + total +
-                ", tax=" + tax +
-                ", currency='" + currency + '\''.toString() +
-                ", issued=" + issued +
-                ", uploaded=" + uploaded +
-                ", vendor='" + vendor + '\''.toString() +
-                ", notes='" + notes + '\''.toString() +
-                ", categories=" + categories +
-                ", id='" + id + '\''.toString() +
-                '}'.toString()
-    }
 }

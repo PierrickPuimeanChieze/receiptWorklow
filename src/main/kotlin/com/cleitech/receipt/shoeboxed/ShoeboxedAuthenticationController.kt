@@ -41,10 +41,10 @@ class ShoeboxedAuthenticationController(@Autowired private val shoeboxedProperti
     }
 
     @GetMapping("/callback")
-
     fun callback(code: String): String {
         shoeboxedService.retrieveAndWriteAccessToken(code)
         return "shoeboxed/callback"
 
     }
+
 }

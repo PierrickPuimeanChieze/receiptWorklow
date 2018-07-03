@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import javax.validation.constraints.NotBlank;
 import java.io.File;
 
-@ConfigurationProperties(prefix = "shoeboxed", ignoreUnknownFields = false)
+@ConfigurationProperties(prefix = "shoeboxed")
 @Configuration
 public class ShoeboxedProperties {
 
@@ -18,7 +18,7 @@ public class ShoeboxedProperties {
     private ProcessingState uploadProcessingState = ProcessingState.NEEDS_SYSTEM_PROCESSING;
     @NotBlank
     private String redirectUrl;
-    private String toSentCategory;
+
     private File accessTokenFile;
 
     public File getAccessTokenFile() {
@@ -62,11 +62,4 @@ public class ShoeboxedProperties {
         this.redirectUrl = redirectUrl;
     }
 
-    public String getToSentCategory() {
-        return toSentCategory;
-    }
-
-    public void setToSentCategory(String toSentCategory) {
-        this.toSentCategory = toSentCategory;
-    }
 }

@@ -3,6 +3,7 @@ package com.cleitech.receipt
 import com.cleitech.receipt.dropbox.DropboxService
 import com.cleitech.receipt.properties.ServiceProperties
 import com.cleitech.receipt.properties.ShoeboxedProperties
+import com.cleitech.receipt.shoeboxed.ShoeboxedService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.SpringApplication
@@ -32,7 +33,8 @@ class SampleIntegrationApplication {
     }
 
     @Bean
-    fun testRunner(dropboxService: DropboxService): CommandLineRunner = CommandLineRunner { dropboxService.testCheck() }
+    fun testRunner(shoeboxedService: ShoeboxedService): CommandLineRunner = CommandLineRunner {
+    }
 }
 
 
