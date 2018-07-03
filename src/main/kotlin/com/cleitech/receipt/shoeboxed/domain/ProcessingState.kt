@@ -1,9 +1,9 @@
-package com.cleitech.receipt.shoeboxed.domain;
+package com.cleitech.receipt.shoeboxed.domain
 
 /**
  * Created by ppc on 1/26/2017.
  */
-public enum ProcessingState {
+enum class ProcessingState {
 
     PROCESSED,
     NEEDS_USER_PROCESSING,
