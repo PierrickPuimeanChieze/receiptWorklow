@@ -21,6 +21,8 @@
             <int:wire-tap channel="writeToDropbox"/>
         </int:interceptors>
     </int:channel>
+    <int:channel id="cleanShoeboxedToSentCategoryChannel"/>
+
     <int:inbound-channel-adapter ref="driveFileReadingSource" channel="readFromDrive"/>
     <int:inbound-channel-adapter ref="ocrFileReadingSource" channel="readFromOcr"/>
 
@@ -33,6 +35,9 @@
 
     <int:service-activator id="dropBoxWriter" ref="dropboxHandler" input-channel="writeToDropbox"
                            output-channel="writedToDropbox"/>
+
+    <int:service-activator id="cleanShoeboxedToSentCategory" ref="shoeboxedCategoryCleaner"
+                           input-channel="cleanShoeboxedToSentCategoryChannel"/>
 
     <int:service-activator id="ocrWriter" ref="ocrHandler" input-channel="writeToOcr" output-channel="writedToOcr"/>
 
@@ -73,6 +78,12 @@
                 input-channel="writedToDropbox"
                 output-channel="writeToDrive"
                 expression="headers.containsKey(T(com.cleitech.receipt.headers.DriveFileHeaders).DEST_DIR)"/>
+
+    <int:filter id="cleanShoboxedToSentCatgoryFilter"
+                input-channel="writedToDropbox"
+                output-channel="cleanShoeboxedToSentCategoryChannel"
+                expression="headers.containsKey(T(com.cleitech.receipt.headers.ShoeboxedHeaders).TO_SEND_CATEGORY)"/>
+
     <int-mail:outbound-channel-adapter
             channel="mailToSend"
             host="${receipt-workflow.mail.smtp.host}"

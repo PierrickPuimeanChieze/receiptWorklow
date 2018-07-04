@@ -11,3 +11,4 @@ target/
 !/executionPath/driveToOcr.json
 dropboxAccessToken
 /executionPath/*
+/src/main/resources/custom.*

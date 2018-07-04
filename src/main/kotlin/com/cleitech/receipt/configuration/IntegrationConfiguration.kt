@@ -4,7 +4,6 @@ import com.cleitech.receipt.ConfigurationService
 import com.cleitech.receipt.MailAggregator
 import com.cleitech.receipt.handlers.DriveFileWritingHandler
 import com.cleitech.receipt.handlers.OcrHandler
-import com.cleitech.receipt.headers.DriveFileHeaders
 import com.cleitech.receipt.headers.OperationHeaders
 import com.cleitech.receipt.properties.ServiceProperties
 import com.cleitech.receipt.properties.ShoeboxedProperties
@@ -13,6 +12,7 @@ import com.cleitech.receipt.services.OcrService
 import com.cleitech.receipt.shoeboxed.ShoeboxedService
 import com.cleitech.receipt.source.DriveFileReadingSource
 import com.cleitech.receipt.source.ShoeboxedFileReadingSource
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -22,8 +22,6 @@ import org.springframework.integration.channel.DirectChannel
 import org.springframework.integration.core.MessageSelector
 import org.springframework.integration.dsl.IntegrationFlow
 import org.springframework.integration.file.FileWritingMessageHandler
-import org.springframework.integration.router.AbstractMessageRouter
-import org.springframework.messaging.Message
 import org.springframework.messaging.MessageChannel
 import java.io.File
 
@@ -36,7 +34,10 @@ class IntegrationConfiguration {
     fun driveFileReadingSource(driveService: DriveService, confService: ConfigurationService): DriveFileReadingSource = DriveFileReadingSource(driveService, confService)
 
     @Bean("ocrFileReadingSource")
-    fun ocrFileReadingSource(shoeboxedService: ShoeboxedService): ShoeboxedFileReadingSource = ShoeboxedFileReadingSource(shoeboxedService)
+    fun ocrFileReadingSource(@Value("\${shoeboxed.category.toSent.name}") toSendCategoryName: String,
+                             @Value("\${shoeboxed.category.toSent.id}") toSendCategoryId: String,
+                             @Value("\${dropbox.uploadPath}") dropboxPath: String,
+                             shoeboxedService: ShoeboxedService): ShoeboxedFileReadingSource = ShoeboxedFileReadingSource(toSendCategoryName, toSendCategoryId, dropboxPath, shoeboxedService)
 
     @Bean("driveFileWritingHandler")
     fun driveFileWritingHandler(driveService: DriveService): DriveFileWritingHandler = DriveFileWritingHandler(driveService)
@@ -46,21 +47,21 @@ class IntegrationConfiguration {
      * Absence of both will write to Drive
      * Presence of both will throw an IllegalStateException
      */
-    @Bean
-    fun driveRouter() = object : AbstractMessageRouter() {
-        override fun determineTargetChannels(message: Message<*>): MutableCollection<MessageChannel> {
-            val toOcr = message.headers.containsKey(DriveFileHeaders.OCR_CAT)
-            val toDropbox = message.headers.containsKey(DriveFileHeaders.DROPBOX_PATH)
-            if (toOcr && toDropbox)
-                throw IllegalStateException(message.toString() + " need to be sent to OCR OR Dropbox. Not box")
-            else if (toOcr)
-                return mutableListOf(sendToOcr())
-            else if (toDropbox)
-                return mutableListOf(sendToDropbox())
-            else
-                return mutableListOf(writeToDrive())
-        }
-    }
+//    @Bean
+//    fun driveRouter() = object : AbstractMessageRouter() {
+//        override fun determineTargetChannels(message: Message<*>): MutableCollection<MessageChannel> {
+//            val toOcr = message.headers.containsKey(DriveFileHeaders.OCR_CAT)
+//            val toDropbox = message.headers.containsKey(DriveFileHeaders.DROPBOX_PATH)
+//            if (toOcr && toDropbox)
+//                throw IllegalStateException(message.toString() + " need to be sent to OCR OR Dropbox. Not box")
+//            else if (toOcr)
+//                return mutableListOf(sendToOcr())
+//            else if (toDropbox)
+//                return mutableListOf(sendToDropbox())
+//            else
+//                return mutableListOf(writeToDrive())
+//        }
+//    }
 
     @Bean("readFromDrive")
     fun readFromDrive(): DirectChannel = DirectChannel()

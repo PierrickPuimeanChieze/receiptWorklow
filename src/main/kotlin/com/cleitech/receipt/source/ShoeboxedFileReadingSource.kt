@@ -1,6 +1,7 @@
 package com.cleitech.receipt.source
 
 import com.cleitech.receipt.headers.DriveFileHeaders
+import com.cleitech.receipt.headers.ShoeboxedHeaders
 import com.cleitech.receipt.shoeboxed.ShoeboxedService
 import com.cleitech.receipt.shoeboxed.domain.Document
 import org.springframework.integration.context.IntegrationObjectSupport
@@ -9,12 +10,13 @@ import org.springframework.messaging.Message
 import java.util.*
 import java.util.concurrent.LinkedTransferQueue
 
-class ShoeboxedFileReadingSource(val shoeboxedService: ShoeboxedService) : IntegrationObjectSupport(), MessageSource<ByteArray> {
+class ShoeboxedFileReadingSource(val toSendCategoryName: String, val toSendCategoryId: String, val dropboxUploadDir: String, val shoeboxedService: ShoeboxedService) : IntegrationObjectSupport(), MessageSource<ByteArray> {
 
-    //TODO to conf file
-    private val CATEGORY: String = "dummySend"
-    private val DROPBOX_PATH: String = "IN"
     private val toBeReceived: Queue<Document> = LinkedTransferQueue<Document>()
+
+    companion object {
+        private const val PROPERTY_NAME_TYPE: String = "type"
+    }
 
     override fun receive(): Message<ByteArray>? {
         var message: Message<ByteArray>? = null
@@ -35,7 +37,9 @@ class ShoeboxedFileReadingSource(val shoeboxedService: ShoeboxedService) : Integ
             val payloadBuilder = messageBuilderFactory.withPayload(file.attachment!!.url!!.readBytes())
 
 
-            payloadBuilder.setHeader(DriveFileHeaders.DROPBOX_PATH, DROPBOX_PATH)
+            val dropboxPath = "$dropboxUploadDir/${buildUploadFileName(file)}"
+            payloadBuilder.setHeader(DriveFileHeaders.DROPBOX_PATH, dropboxPath)
+            payloadBuilder.setHeader(ShoeboxedHeaders.TO_SEND_CATEGORY, toSendCategoryId)
             message = payloadBuilder.build()
             if (logger.isInfoEnabled) {
                 logger.info("Created message: [$message]")
@@ -44,8 +48,32 @@ class ShoeboxedFileReadingSource(val shoeboxedService: ShoeboxedService) : Integ
         return message
     }
 
+    private fun buildUploadFileName(document: Document): String {
+        return String.format("%tF_%s_%s%s.pdf",
+                document.issued,
+                document.vendor.replace(" ", ""),
+                document.total.toString().replace('.', ','),
+                "_" + extractTypeInfoFromCategory(document.categories))
+    }
+
+    /**
+     * Parse catgories, searching category starting with `[.PROPERTY_NAME_TYPE]:`
+     *
+     * @param categories categories to parse
+     * @return type info, or empty value
+     */
+    private fun extractTypeInfoFromCategory(categories: List<String>): String {
+        val propertyMarker = "$PROPERTY_NAME_TYPE:"
+        for (category in categories) {
+            if (category.startsWith(propertyMarker)) {
+                return category.substring(propertyMarker.length)
+            }
+        }
+        return ""
+    }
+
     private fun scanInputDirectory() {
-        var retrieveDocument = shoeboxedService.retrieveDocument(CATEGORY)
+        var retrieveDocument = shoeboxedService.retrieveDocument(shoeboxedService.retrieveAccountId(), toSendCategoryName)
         for (document in retrieveDocument) {
             this.toBeReceived.add(document)
 

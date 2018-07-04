@@ -27,7 +27,7 @@ class SampleIntegrationApplication {
                        @Value("\${dropbox.accessToken}")
                        accessTokenFile: String
     ): DropboxService {
-        val dropboxService = DropboxService(uploadPath, accessTokenFile)
+        val dropboxService = DropboxService(accessTokenFile)
 //        dropboxService.initDropboxAccessToken()
         return dropboxService
     }
